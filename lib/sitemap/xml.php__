@@ -1,0 +1,96 @@
+<?
+
+namespace N7\Sitemap;
+
+class Xml
+{
+	private $xml;
+	public $path;
+	private $filename;
+	private static $xmlNamespace = "http://www.google.com/schemas/sitemap-image/1.1";
+	private $result;
+
+
+
+	public function __construct($filename)
+	{
+
+		$this->filename = $filename;
+
+		$this->path = self::setPath($this->filename);
+
+		if (file_exists($this->path)) {
+			$this->xml = new \SimpleXMLElement(file_get_contents($this->path));
+		} else {
+			$this->xml = $this->createNewXml();
+		}
+	}
+
+
+	private static function setPath($filename)
+	{
+		return $_SERVER['DOCUMENT_ROOT'] . "/" . $filename . ".xml";
+	} 
+
+
+	public static function delete($filename)
+	{
+		$i = 0;
+		while(true)
+		{
+			
+			if ($i != 0) $filename = $filename . $i;
+			$path = self::setPath($filename);
+			if (file_exists($path)) {
+				unlink($path);
+			}
+			else{
+				break;
+			}
+			$i++;
+		}
+	} 
+	
+
+	public function getFileSize($path)
+	{
+		// Получаем размер файла в байтах
+		$sizeInBytes = filesize($path);
+
+		// Конвертируем в мегабайты
+		$sizeInMB = $sizeInBytes / (1024 * 1024);
+
+		return round($sizeInMB, 3);
+	}
+
+	private function createNewXml()
+	{
+		$newXml = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"></urlset>';
+		return 	new \SimpleXMLElement($newXml);
+	}
+
+	
+
+
+
+	public function write(string $url, array $imgs)
+	{
+		$urlParam = $this->xml->addChild('url');
+		$urlParam->addChild('loc', $url);
+		
+		foreach ($imgs as $img)
+		{
+			$image = $urlParam->addChild('image:image', null ,self::$xmlNamespace);
+			$image->addChild("image:loc",$img, self::$xmlNamespace);
+		}
+
+		file_put_contents($this->path, $this->xml->asXML());
+		
+		$this->result['urlCount'] = count($this->xml->url);
+		$this->result['fileSize'] = $this->getFileSize($this->path);
+
+		return $this->result;
+	}
+
+
+}
